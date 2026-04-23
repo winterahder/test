@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>오상고 상담카드 시스템 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Pretendard', -apple-system, sans-serif; background: #f5f6fa; color: #222; font-size: 14px; }
+  header { background: #fff; padding: 14px 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+  header h1 span.year { color: #94a3b8; font-weight: 400; font-size: 14px; margin-left: 4px; }
+  #status { color: #64748b; font-size: 13px; }
+  .layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; padding: 16px; height: calc(100vh - 60px); }
+  aside { background: #fff; border-radius: 8px; padding: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  aside input, aside select { width: 100%; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; margin-bottom: 6px; }
+  aside .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .stu-list { flex: 1; overflow-y: auto; margin-top: 6px; }
+  .stu-item { display: grid; grid-template-columns: 55px 1fr; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; align-items: center; }
+  .stu-item:hover { background: #f1f5f9; }
+  .stu-item.active { background: #dbeafe; color: #1e40af; font-weight: 600; }
+  .stu-item .hak { color: #64748b; font-variant-numeric: tabular-nums; }
+  .stu-item.active .hak { color: #1e40af; }
+  main { background: transparent; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .card { background: #fff; border-radius: 8px; padding: 18px 22px; }
+  .stu-header h2 { font-size: 20px; margin-bottom: 8px; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { padding: 4px 10px; background: #eff6ff; color: #1e40af; border-radius: 12px; font-size: 12px; }
+  .badge.gender-m { background: #dbeafe; color: #1e40af; }
+  .badge.gender-f { background: #fce7f3; color: #9f1239; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid #e5e7eb; padding: 0 12px; background: #fff; border-radius: 8px 8px 0 0; }
+  .tab { padding: 12px 18px; cursor: pointer; font-size: 14px; color: #64748b; border-bottom: 2px solid transparent; }
+  .tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; background: #eff6ff; border-radius: 6px 6px 0 0; }
+  .tab-content { background: #fff; border-radius: 0 0 8px 8px; padding: 20px; min-height: 300px; }
+  .placeholder { text-align: center; color: #94a3b8; padding: 80px 0; font-size: 15px; }
+  table.info { width: 100%; border-collapse: collapse; }
+  table.info td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
+  table.info td:first-child { width: 180px; background: #f8fafc; font-weight: 600; color: #475569; }
+  .toggle-group { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+  .toggle-btn { padding: 6px 14px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .toggle-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .chart-wrap { position: relative; height: 340px; margin-bottom: 18px; }
+  table.mock, table.grade { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.mock th, table.mock td, table.grade th, table.grade td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: center; }
+  table.mock th, table.grade th { background: #f8fafc; font-weight: 600; color: #475569; }
+  table.grade td.subj { text-align: left; font-weight: 500; }
+  table.grade td.grade-1 { color: #1e40af; font-weight: 700; }
+  table.grade td.grade-2 { color: #2563eb; font-weight: 600; }
+  table.grade td.grade-3 { color: #10b981; font-weight: 500; }
+  table.grade td.grade-4 { color: #059669; }
+  table.grade td.grade-5 { color: #64748b; }
+  table.grade td.grade-6 { color: #d97706; }
+  table.grade td.grade-7, table.grade td.grade-8, table.grade td.grade-9 { color: #dc2626; font-weight: 600; }
+  table.mock td.grade-1 { color: #2563eb; font-weight: 700; }
+  table.mock td.grade-2 { color: #2563eb; }
+  table.mock td.grade-9 { color: #dc2626; font-weight: 700; }
+  table.mock td.grade-8 { color: #dc2626; }
+  table.mock td.big { font-size: 15px; font-weight: 600; padding: 6px; }
+  table.mock td.bg-1 { background: #1e40af; color: #fff; }
+  table.mock td.bg-2 { background: #3b82f6; color: #fff; }
+  table.mock td.bg-3 { background: #60a5fa; color: #fff; }
+  table.mock td.bg-4 { background: #93c5fd; }
+  table.mock td.bg-5 { background: #fde68a; }
+  table.mock td.bg-6 { background: #fdba74; }
+  table.mock td.bg-7 { background: #fb923c; color: #fff; }
+  table.mock td.bg-8 { background: #ef4444; color: #fff; }
+  table.mock td.bg-9 { background: #991b1b; color: #fff; }
+  .semester-block { margin-bottom: 24px; }
+  .semester-title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 10px; padding: 8px 12px; background: #f1f5f9; border-left: 4px solid #2563eb; border-radius: 4px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 10px 0 14px; }
+  .summary-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; text-align: center; }
+  .summary-card .label { color: #64748b; font-size: 12px; margin-bottom: 4px; }
+  .summary-card .value { font-size: 20px; font-weight: 700; color: #1e40af; }
+  .summary-card.highlight { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #93c5fd; }
+  .summary-card.est { background: linear-gradient(135deg, #faf5ff, #f3e8ff); border-color: #c084fc; }
+  .summary-card.est .value { color: #a855f7; }
+  .filter-label { display: inline-block; margin-right: 8px; font-weight: 600; color: #475569; font-size: 13px; }
+  .no-data { padding: 40px; text-align: center; color: #94a3b8; background: #f8fafc; border-radius: 8px; }
+  .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .accordion { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; overflow: hidden; background: #fff; }
+  .accordion-head { padding: 14px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; transition: background 0.15s; }
+  .accordion-head:hover { background: #f8fafc; }
+  .accordion.open .accordion-head { background: #eff6ff; border-bottom: 1px solid #dbeafe; }
+  .accordion-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .accordion-title .sub-cat { padding: 3px 8px; background: #e0f2fe; color: #0369a1; border-radius: 12px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .accordion-title .sub-name { font-weight: 700; color: #1e293b; flex-shrink: 0; }
+  .accordion-title .sub-summary { color: #64748b; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .accordion-head .arrow { color: #94a3b8; font-size: 12px; transition: transform 0.2s; }
+  .accordion.open .arrow { transform: rotate(90deg); color: #2563eb; }
+  .accordion-body { padding: 16px 20px; background: #fafbfc; border-top: 1px solid #f1f5f9; line-height: 1.8; font-size: 14px; color: #334155; display: none; white-space: pre-wrap; word-break: keep-all; }
+  .accordion.open .accordion-body { display: block; }
+  .sub-meta { font-size: 11px; color: #94a3b8; margin-left: 4px; }
+  .scale-btn { margin-left: 12px; border: 1px solid #a855f7 !important; color: #a855f7; background: #fff; }
+  .scale-btn.active { background: #a855f7 !important; color: #fff !important; border-color: #a855f7 !important; }
+  .est-info { background: linear-gradient(135deg, #faf5ff, #f3e8ff); border: 1px solid #e9d5ff; color: #6b21a8; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 14px; line-height: 1.6; }
+  .est-info strong { color: #a855f7; }
+  .est-tag { display: inline-block; padding: 2px 6px; background: #f3e8ff; color: #a855f7; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📋 오상고 상담카드 시스템 <span class="year">2026</span></h1>
+  <div id="status">로딩중...</div>
+</header>
+<div class="layout">
+  <aside>
+    <input id="search" placeholder="🔍 이름 또는 학번 검색">
+    <div class="filters">
+      <select id="gradeFilter"><option value="">전체 학년</option><option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option></select>
+      <select id="classFilter"><option value="">전체 반</option></select>
+    </div>
+    <div class="stu-list" id="stuList"></div>
+  </aside>
+  <main id="main">
+    <div class="card placeholder">👈 왼쪽에서 학생을 선택하세요</div>
+  </main>
+</div>
+<script>
+const LABELS = { hak:'학번', grade:'학년', class:'반', no:'번호', name:'이름', gender:'성별', g1_hak:'1학년 학번', g2_hak:'2학년 학번', g3_hak:'3학년 학번' };
+const ORDER = ['hak','grade','class','no','name','gender','g1_hak','g2_hak','g3_hak'];
+const SUBJECTS = ['국어','수학','영어','한국사','탐구1','탐구2'];
+const COLORS = { '국어':'#3b82f6','수학':'#ef4444','영어':'#10b981','한국사':'#8b5cf6','탐구1':'#f97316','탐구2':'#06b6d4' };
+const ROUND_ORDER = ['g1_3월','g1_6월','g1_9월','g1_11월','g2_3월','g2_6월','g2_9월','g2_11월','g3_3월','g3_6월','g3_9월','g3_11월'];
+const ROUND_LABEL = { 'g1_3월':'1학년 3월','g1_6월':'1학년 6월','g1_9월':'1학년 9월','g1_11월':'1학년 11월','g2_3월':'2학년 3월','g2_6월':'2학년 6월','g2_9월':'2학년 9월','g2_11월':'2학년 11월','g3_3월':'3학년 3월','g3_6월':'3학년 6월','g3_9월':'3학년 9월','g3_11월':'3학년 11월' };
+
+const GRADE_FILTERS = {
+  '전체': null,
+  '국영수사과': ['국어','영어','수학','사회(역사/도덕포함)','과학'],
+  '국영수': ['국어','영어','수학'],
+  '국영수사': ['국어','영어','수학','사회(역사/도덕포함)'],
+  '국영수과': ['국어','영어','수학','과학'],
+  '영수과': ['영어','수학','과학']
+};
+
+const SEWTUK_CATEGORIES = ['전체 과목','국어','영어','수학','사회(역사/도덕포함)','과학','예술','체육','교양','제2외국어/한문'];
+const SEWTUK_GRADES = ['전체 학년','1학년','2학년','3학년'];
+const SEWTUK_SEMESTERS = ['전체 학기','1학기','2학기'];
+
+let students=[], mock={}, grades={}, sewtuk={}, currentStu=null, currentTab='기본정보', currentMode='등급', currentGradeFilter='전체', chartInst=null;
+let sewtukGrade='전체 학년', sewtukSem='전체 학기', sewtukCat='전체 과목';
+let openAccordions = new Set();
+let gradeScale = 5; // 5 or 9
+
+// ========== 9등급 환산 로직 (성취도 분포 + 원점수 기반 추정) ==========
+// 분포 문자열 파싱: "A(22.1) B(30.0) C(22.1) D(20.2) E(5.7)" → {A:22.1, B:30.0, ...}
+function parseDist(str){
+  if(!str) return null;
+  const r = {};
+  const re = /([A-E])\s*\(\s*([\d.]+)\s*\)/g;
+  let m;
+  while((m = re.exec(str)) !== null){ r[m[1]] = parseFloat(m[2]); }
+  return r;
+}
+
+// 원점수 + 분포 → 추정 누적 백분위 (상위 %)
+function estPercentile(score, dist){
+  if(score==null || !dist) return null;
+  const order = ['A','B','C','D','E'];
+  const cuts = { A:[90,100], B:[80,90], C:[70,80], D:[60,70], E:[0,60] };
+  let band = 'E';
+  if(score >= 90) band = 'A';
+  else if(score >= 80) band = 'B';
+  else if(score >= 70) band = 'C';
+  else if(score >= 60) band = 'D';
+  // 해당 구간 위쪽 누적 %
+  let above = 0;
+  for(const b of order){ if(b === band) break; above += (dist[b] || 0); }
+  // 구간 내 위치 (0=최상위, 1=최하위)
+  const [lo, hi] = cuts[band];
+  const pos = hi > lo ? (hi - score) / (hi - lo) : 0.5;
+  const clamped = Math.max(0, Math.min(1, pos));
+  const thisBand = dist[band] || 0;
+  return above + clamped * thisBand;
+}
+
+// 백분위 → 9등급
+function percentileToGrade9(p){
+  if(p == null) return null;
+  if(p <= 4) return 1;
+  if(p <= 11) return 2;
+  if(p <= 23) return 3;
+  if(p <= 40) return 4;
+  if(p <= 60) return 5;
+  if(p <= 77) return 6;
+  if(p <= 89) return 7;
+  if(p <= 96) return 8;
+  return 9;
+}
+
+// 과목 객체 → 9등급 (실제 석차 우선, 없으면 분포 추정)
+function estGrade9(subj){
+  if(!subj || subj.등급 == null) return null;
+  // 1순위: 엑셀 석차 기반 실제 9등급
+  if(subj.등급9 != null){
+    return { grade: subj.등급9, percentile: subj.백분위, source: '실제' };
+  }
+  // 2순위: 성취도 분포 기반 추정
+  const p = estPercentile(subj.원점수, parseDist(subj.분포));
+  if(p == null) return null;
+  return { grade: percentileToGrade9(p), percentile: p, source: '추정' };
+}
+
+// 과목 객체 → 현재 scale 등급 + 소스(실제/추정)
+function getG9Info(subj){
+  const est = estGrade9(subj);
+  return est;
+}
+
+// 통합: 현재 scale에 맞는 등급 반환
+function getG(subj){
+  if(!subj || subj.등급 == null) return null;
+  if(gradeScale === 5) return subj.등급;
+  const est = estGrade9(subj);
+  return est ? est.grade : null;
+}
+
+function fmtG(subj){
+  const g = getG(subj);
+  return g != null ? g : '-';
+}
+
+// ========== 메인 로직 ==========
+async function init(){
+  try{
+    const [sRes,mRes] = await Promise.all([
+      fetch('data/students.json'),
+      fetch('data/mock.json')
+    ]);
+    students = await sRes.json();
+    mock = await mRes.json();
+    try{
+      const gRes = await fetch('data/grades_2.json');
+      if(gRes.ok) grades = await gRes.json();
+    }catch(e){ console.warn('grades_2_1.json 로드 실패:', e); }
+    try{
+      const swRes = await fetch('data/sewtuk_2.json');
+      if(swRes.ok) sewtuk = await swRes.json();
+    }catch(e){ console.warn('sewtuk_2_1.json 로드 실패:', e); }
+    document.getElementById('status').textContent = `총 ${students.length}명 로드됨 · 2학년 내신 ${Object.keys(grades).length}명 · 세특 ${Object.keys(sewtuk).filter(k=>sewtuk[k].subjects&&sewtuk[k].subjects.length).length}명`;
+    renderList();
+  }catch(e){
+    document.getElementById('status').textContent = '오류: '+e.message;
+  }
+}
+
+function renderList(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const gf = document.getElementById('gradeFilter').value;
+  const cf = document.getElementById('classFilter').value;
+  const filtered = students.filter(s=>{
+    const hak = String(s.hak);
+    if(gf && hak[0]!==gf) return false;
+    if(cf && hak.substring(1,3)!==cf) return false;
+    if(q && !s.name.toLowerCase().includes(q) && !hak.includes(q)) return false;
+    return true;
+  });
+  const list = document.getElementById('stuList');
+  list.innerHTML = filtered.map(s=>`<div class="stu-item ${currentStu && currentStu.hak===s.hak?'active':''}" data-hak="${s.hak}"><span class="hak">${s.hak}</span><span>${s.name}</span></div>`).join('');
+  list.querySelectorAll('.stu-item').forEach(el=>{
+    el.onclick = ()=>{
+      const hak = el.dataset.hak;
+      currentStu = students.find(s=>String(s.hak)===hak);
+      currentTab = '기본정보';
+      openAccordions.clear();
+      renderList();
+      renderMain();
+    };
+  });
+}
+
+function renderMain(){
+  if(!currentStu){ document.getElementById('main').innerHTML='<div class="card placeholder">👈 왼쪽에서 학생을 선택하세요</div>'; return; }
+  const s = currentStu;
+  const genderClass = s.gender==='남'?'gender-m':'gender-f';
+  const tabs = ['기본정보','모의고사','내신','세특','행발','수상','독서'];
+  document.getElementById('main').innerHTML = `
+    <div class="card stu-header">
+      <h2>${s.name} (${s.hak})</h2>
+      <div class="badges">
+        <span class="badge">${String(s.hak)[0]}학년 ${parseInt(String(s.hak).substring(1,3))}반 ${parseInt(String(s.hak).substring(3,5))}번</span>
+        <span class="badge ${genderClass}">${s.gender}</span>
+        ${s.g1_hak?`<span class="badge">1학년 학번: ${s.g1_hak}</span>`:''}
+        ${s.g2_hak?`<span class="badge">2학년 학번: ${s.g2_hak}</span>`:''}
+      </div>
+    </div>
+    <div class="tabs">${tabs.map(t=>`<div class="tab ${t===currentTab?'active':''}" data-tab="${t}">${t}</div>`).join('')}</div>
+    <div class="tab-content" id="tabContent"></div>
+  `;
+  document.querySelectorAll('.tab').forEach(el=>{
+    el.onclick = ()=>{ currentTab = el.dataset.tab; renderMain(); };
+  });
+  renderTab();
+}
+
+function renderTab(){
+  const el = document.getElementById('tabContent');
+  if(!el) return;
+  if(currentTab==='기본정보') renderInfo(el);
+  else if(currentTab==='모의고사') renderMock(el);
+  else if(currentTab==='내신') renderGrades(el);
+  else if(currentTab==='세특') renderSewtuk(el);
+  else el.innerHTML = `<div class="placeholder">${currentTab} 탭 (준비중)</div>`;
+}
+
+function renderInfo(el){
+  const s = currentStu;
+  const keys = ORDER.filter(k=>s[k]!==undefined && s[k]!==null && s[k]!=='');
+  Object.keys(s).forEach(k=>{ if(!ORDER.includes(k) && s[k]) keys.push(k); });
+  el.innerHTML = `<table class="info">${keys.map(k=>`<tr><td>${LABELS[k]||k}</td><td>${s[k]}</td></tr>`).join('')}</table>`;
+}
+
+// ========== 내신 탭 ==========
+function renderGrades(el){
+  const s = currentStu;
+  const hak = String(s.hak);
+  let data = grades[hak];
+  if(!data && s.g2_hak) data = grades[String(s.g2_hak)];
+  if(!data || !data.grades){
+    el.innerHTML = `<div class="no-data">📋 내신 데이터가 없습니다<br><small style="color:#94a3b8;">(현재 2학년 학생들의 1학년 성적만 등록되어 있습니다)</small></div>`;
+    return;
+  }
+  const filterBtns = Object.keys(GRADE_FILTERS).map(k=>`<button class="toggle-btn ${k===currentGradeFilter?'active':''}" data-gfilter="${k}">${k}</button>`).join('');
+  const scaleBtn = `<button class="toggle-btn scale-btn ${gradeScale===9?'active':''}" data-scale="toggle">9등급 환산 (실제)</button>`;
+  const semesters = Object.keys(data.grades).sort();
+  let html = `<div style="margin-bottom:16px;"><span class="filter-label">📐 계열별 평균:</span><div class="toggle-group" style="display:inline-flex;">${filterBtns}${scaleBtn}</div></div>`;
+
+  if(gradeScale === 9){
+    html += `<div class="est-info">
+      <strong>📊 9등급 환산 방식</strong> — <strong>실제 석차 데이터 기반</strong>으로 표준 내신 9등급 컷(상위 4/11/23/40/60/77/89/96%)에 따라 환산합니다.<br>
+      석차가 없는 과목(체육/예술/과학탐구실험 등)은 기존 성취도로 표시됩니다.
+      <br><span style="color:#94a3b8;">※ 과목 옆 <span class="est-tag">실제</span>는 석차 기반, <span class="est-tag" style="background:#fef3c7;color:#92400e;">추정</span>은 분포 기반입니다.</span>
+    </div>`;
+  }
+
+  html += renderGradeFilterSummary(data);
+  semesters.forEach(sem=>{ html += renderSemesterBlock(sem, data.grades[sem]); });
+  el.innerHTML = html;
+  el.querySelectorAll('[data-gfilter]').forEach(b=>{ b.onclick = ()=>{ currentGradeFilter = b.dataset.gfilter; renderTab(); }; });
+  el.querySelectorAll('[data-scale]').forEach(b=>{ b.onclick = ()=>{ gradeScale = gradeScale===5 ? 9 : 5; renderTab(); }; });
+}
+
+function renderGradeFilterSummary(data){
+  const filter = GRADE_FILTERS[currentGradeFilter];
+  const allSubjects = [];
+  Object.entries(data.grades).forEach(([sem, semData])=>{ (semData.subjects||[]).forEach(sub=>{ allSubjects.push({...sub, sem}); }); });
+  const filtered = filter
+    ? allSubjects.filter(s=> filter.includes(s.교과))
+    : allSubjects.filter(s=> s.등급!=null);
+  let totalCredit = 0, weighted = 0, cntWithGrade = 0;
+  filtered.forEach(s=>{
+    const g = getG(s);
+    if(g!=null && s.학점){ totalCredit += s.학점; weighted += g * s.학점; cntWithGrade++; }
+  });
+  const avg = totalCredit>0 ? (weighted/totalCredit).toFixed(2) : '-';
+  const subjNames = [...new Set(filtered.map(s=>s.과목))].join(', ');
+  const scaleLabel = gradeScale===9 ? ' (9등급 추정)' : '';
+  const cardClass = gradeScale===9 ? 'summary-card est' : 'summary-card highlight';
+  return `
+    <div class="summary-grid">
+      <div class="${cardClass}"><div class="label">${currentGradeFilter} 평균등급${scaleLabel}</div><div class="value">${avg}</div></div>
+      <div class="summary-card"><div class="label">반영 학점</div><div class="value">${totalCredit}</div></div>
+      <div class="summary-card"><div class="label">반영 과목수</div><div class="value">${cntWithGrade}</div></div>
+    </div>
+    ${filter ? `<div style="color:#64748b;font-size:12px;margin-bottom:14px;">📌 포함 과목: ${subjNames || '없음'}</div>` : ''}
+  `;
+}
+
+function renderSemesterBlock(sem, semData){
+  const summary = semData.summary || {};
+  const subjects = semData.subjects || [];
+  const semLabel = `${sem.split('-')[0]}학년 ${sem.split('-')[1]}학기`;
+  const filter = GRADE_FILTERS[currentGradeFilter];
+  // 학기 평균 재계산
+  let semCredit = 0, semWeighted = 0;
+  subjects.forEach(s=>{
+    const g = getG(s);
+    if(g!=null && s.학점){ semCredit += s.학점; semWeighted += g * s.학점; }
+  });
+  const semAvg = semCredit>0 ? (semWeighted/semCredit).toFixed(2) : '-';
+  const rows = subjects.map(s=>{
+    const highlighted = filter && filter.includes(s.교과);
+    const rowStyle = filter && !highlighted ? 'opacity:0.4;' : '';
+    const g = getG(s);
+    const gradeClass = g != null ? 'grade-'+g : '';
+    let estTag = '';
+    if(gradeScale===9 && s.등급!=null){
+      const info = estGrade9(s);
+      if(info && info.source==='실제') estTag = '<span class="est-tag" style="background:#dcfce7;color:#15803d;">실제</span>';
+      else if(info && info.source==='추정') estTag = '<span class="est-tag" style="background:#fef3c7;color:#92400e;">추정</span>';
+    }
+    const rankCell = (gradeScale===9 && s.석차 && s.수강자수) ? `${s.석차}/${s.수강자수}` : (s.수강자수||'-');
+    return `<tr style="${rowStyle}"><td>${s.교과||'-'}</td><td class="subj">${s.과목}</td><td>${s.학점||'-'}</td><td>${s.원점수!=null?s.원점수:'-'}</td><td>${s.과목평균!=null?s.과목평균:'-'}</td><td>${s.성취도||'-'}</td><td class="${gradeClass}">${fmtG(s)}${estTag}</td><td>${rankCell}</td></tr>`;
+  }).join('');
+  const scaleTag = gradeScale===9 ? ' <span style="color:#a855f7;font-weight:600;">[9등급 추정]</span>' : '';
+  return `<div class="semester-block"><div class="semester-title">📚 ${semLabel}  <span style="font-weight:400;color:#64748b;font-size:13px;">· 평균 ${semAvg}등급${scaleTag} · 총 ${summary.총학점||'-'}학점 (등급 ${summary.등급대상학점||'-'}학점)</span></div><table class="grade"><thead><tr><th>교과</th><th>과목</th><th>학점</th><th>원점수</th><th>평균</th><th>성취도</th><th>등급</th><th>석차/수강자</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ========== 세특 탭 ==========
+function renderSewtuk(el){
+  const hak = String(currentStu.hak);
+  let data = sewtuk[hak];
+  if(!data && currentStu.g2_hak) data = sewtuk[String(currentStu.g2_hak)];
+  if(!data || !data.subjects){
+    el.innerHTML = `<div class="no-data">📋 세특 데이터가 없습니다<br><small style="color:#94a3b8;">(현재 2학년 1반 학생들의 1학년 세특만 등록되어 있습니다 — 다른 반은 추후 업데이트 예정)</small></div>`;
+    return;
+  }
+  const gradeBtns = SEWTUK_GRADES.map(g=>`<button class="toggle-btn ${g===sewtukGrade?'active':''}" data-gfil="${g}">${g}</button>`).join('');
+  const semBtns = SEWTUK_SEMESTERS.map(s=>`<button class="toggle-btn ${s===sewtukSem?'active':''}" data-sfil="${s}">${s}</button>`).join('');
+  const catBtns = SEWTUK_CATEGORIES.map(c=>`<button class="toggle-btn ${c===sewtukCat?'active':''}" data-cfil="${c}">${c}</button>`).join('');
+  const filtered = data.subjects.filter(s=>{
+    if(sewtukGrade!=='전체 학년'){ const g = parseInt(sewtukGrade[0]); if(s.학년 !== g) return false; }
+    if(sewtukSem!=='전체 학기'){ const sem = sewtukSem[0]; if(s.학기 !== 'both' && String(s.학기) !== sem) return false; }
+    if(sewtukCat!=='전체 과목'){ if(s.교과 !== sewtukCat) return false; }
+    return true;
+  });
+  let html = `
+    <div class="filter-row"><span class="filter-label">📚 학년</span><div class="toggle-group" style="margin:0;">${gradeBtns}</div></div>
+    <div class="filter-row"><span class="filter-label">🗓 학기</span><div class="toggle-group" style="margin:0;">${semBtns}</div></div>
+    <div class="filter-row"><span class="filter-label">📖 과목</span><div class="toggle-group" style="margin:0;">${catBtns}</div></div>
+    <div style="color:#64748b;font-size:12px;margin-bottom:12px;">총 ${filtered.length}개 과목 · 클릭하면 전문이 펼쳐집니다</div>
+  `;
+  if(filtered.length===0){
+    html += `<div class="no-data">🔍 필터 조건에 해당하는 세특이 없습니다</div>`;
+  }else{
+    filtered.forEach(s=>{
+      const key = `${s.학년}-${s.학기}-${s.과목}`;
+      const isOpen = openAccordions.has(key);
+      html += `
+        <div class="accordion ${isOpen?'open':''}" data-key="${key}">
+          <div class="accordion-head">
+            <div class="accordion-title">
+              <span class="sub-cat">${s.교과}</span>
+              <span class="sub-name">${s.과목}</span>
+              <span class="sub-meta">${s.학년}학년 ${s.학기==='both'?'전체':s.학기+'학기'}</span>
+              <span class="sub-summary">💡 ${escapeHtml(s.요약||'')}</span>
+            </div>
+            <span class="arrow">▶</span>
+          </div>
+          <div class="accordion-body">${escapeHtml(s.내용)}</div>
+        </div>
+      `;
+    });
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('[data-gfil]').forEach(b=>b.onclick=()=>{ sewtukGrade=b.dataset.gfil; renderTab(); });
+  el.querySelectorAll('[data-sfil]').forEach(b=>b.onclick=()=>{ sewtukSem=b.dataset.sfil; renderTab(); });
+  el.querySelectorAll('[data-cfil]').forEach(b=>b.onclick=()=>{ sewtukCat=b.dataset.cfil; renderTab(); });
+  el.querySelectorAll('.accordion-head').forEach(h=>{
+    h.onclick = ()=>{
+      const acc = h.parentElement;
+      const key = acc.dataset.key;
+      if(openAccordions.has(key)){ openAccordions.delete(key); acc.classList.remove('open'); }
+      else { openAccordions.add(key); acc.classList.add('open'); }
+    };
+  });
+}
+
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ========== 모의고사 탭 ==========
+function renderMock(el){
+  const hak = String(currentStu.hak);
+  const rounds = mock[hak] || [];
+  if(rounds.length===0){ el.innerHTML='<div class="placeholder">모의고사 데이터가 없습니다</div>'; return; }
+  rounds.sort((a,b)=>ROUND_ORDER.indexOf(a.round)-ROUND_ORDER.indexOf(b.round));
+  el.innerHTML = `
+    <div class="toggle-group">${['등급','백분위','표준점수','원점수'].map(m=>`<button class="toggle-btn ${m===currentMode?'active':''}" data-mode="${m}">${m}</button>`).join('')}</div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <table class="mock"><thead><tr><th>회차</th>${SUBJECTS.map(s=>`<th>${s}</th>`).join('')}</tr></thead><tbody>${rounds.map(r=>`<tr><td>${ROUND_LABEL[r.round]||r.round}</td>${SUBJECTS.map(sub=>renderCell(r,sub)).join('')}</tr>`).join('')}</tbody></table>
+  `;
+  el.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ currentMode=b.dataset.mode; renderTab(); });
+  drawChart(rounds);
+}
+
+function getVal(r, sub, mode){
+  const d = r[sub]; if(!d) return null;
+  if((sub==='영어'||sub==='한국사') && (mode==='백분위'||mode==='표준점수')) return d['등급'];
+  return d[mode] != null ? d[mode] : null;
+}
+function renderCell(r, sub){
+  const d = r[sub]; if(!d) return '<td>-</td>';
+  const mode = currentMode;
+  if(mode==='등급'){ const g = d['등급']; return `<td class="grade-${g}">${g||'-'}</td>`; }
+  if(mode==='원점수'){ const v = d['원점수']; if(v==null) return '<td>-</td>'; const g = d['등급']; return `<td class="big bg-${g}">${v}</td>`; }
+  if((sub==='영어'||sub==='한국사')){ const g = d['등급']; return `<td class="grade-${g}">${g||'-'}</td>`; }
+  const v = d[mode]; return `<td>${v!=null?v:'-'}</td>`;
+}
+function drawChart(rounds){
+  if(chartInst){ chartInst.destroy(); chartInst=null; }
+  const ctx = document.getElementById('chart'); if(!ctx) return;
+  const labels = rounds.map(r=>ROUND_LABEL[r.round]||r.round);
+  const datasets = SUBJECTS.map(sub=>({ label: sub, data: rounds.map(r=>getVal(r,sub,currentMode)), borderColor: COLORS[sub], backgroundColor: COLORS[sub], tension: 0.25, spanGaps: true }));
+  const cfg = getAxisConfig(currentMode);
+  chartInst = new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: `${currentMode} 추이`, font:{size:14, weight:'bold'} }, legend: { position: 'bottom' } }, scales: { y: { reverse: cfg.reverse, min: cfg.min, max: cfg.max, title: { display: true, text: currentMode, font:{weight:'bold'} }, afterBuildTicks: (axis) => { axis.ticks = cfg.ticks.map(v=>({value:v})); }, ticks: { callback: v=>v, stepSize: cfg.step } } } } });
+}
+function getAxisConfig(mode){
+  if(mode==='등급') return { min:0.5, max:9.5, reverse:true, ticks:[1,2,3,4,5,6,7,8,9], step:1 };
+  if(mode==='백분위') return { min:0, max:100, reverse:false, ticks:[0,10,20,30,40,50,60,70,80,90,100], step:10 };
+  if(mode==='표준점수') return { min:0, max:200, reverse:false, ticks:[0,20,40,60,80,100,120,140,160,180,200], step:20 };
+  return { min:0, max:100, reverse:false, ticks:[0,10,20,30,40,50,60,70,80,90,100], step:10 };
+}
+
+document.getElementById('gradeFilter').onchange = (e)=>{
+  const g = e.target.value;
+  const cf = document.getElementById('classFilter');
+  cf.innerHTML = '<option value="">전체 반</option>';
+  if(g){
+    const classes = new Set(students.filter(s=>String(s.hak)[0]===g).map(s=>String(s.hak).substring(1,3)));
+    [...classes].sort().forEach(c=>{ cf.innerHTML += `<option value="${c}">${parseInt(c)}반</option>`; });
+  }
+  renderList();
+};
+document.getElementById('classFilter').onchange = renderList;
+document.getElementById('search').oninput = renderList;
+
+init();
+</script>
+</body>
+</html>
