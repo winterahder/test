@@ -81,10 +81,15 @@
   .accordion-head { padding: 14px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; transition: background 0.15s; }
   .accordion-head:hover { background: #f8fafc; }
   .accordion.open .accordion-head { background: #eff6ff; border-bottom: 1px solid #dbeafe; }
-  .accordion-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .accordion-title { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+  .acc-top-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .accordion-title .sub-cat { padding: 3px 8px; background: #e0f2fe; color: #0369a1; border-radius: 12px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
   .accordion-title .sub-name { font-weight: 700; color: #1e293b; flex-shrink: 0; }
-  .accordion-title .sub-summary { color: #64748b; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .key-points { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 3px; }
+  .key-points li { color: #475569; font-size: 12px; line-height: 1.55; display: flex; align-items: flex-start; gap: 5px; }
+  .key-points li::before { content: "●"; color: #93c5fd; flex-shrink: 0; font-size: 9px; margin-top: 3px; }
+  .accordion.open .key-points li { color: #1e3a8a; }
+  .accordion.open .key-points li::before { color: #2563eb; }
   .accordion-head .arrow { color: #94a3b8; font-size: 12px; transition: transform 0.2s; }
   .accordion.open .arrow { transform: rotate(90deg); color: #2563eb; }
   .accordion-body { padding: 16px 20px; background: #fafbfc; border-top: 1px solid #f1f5f9; line-height: 1.8; font-size: 14px; color: #334155; display: none; white-space: pre-wrap; word-break: keep-all; }
@@ -395,6 +400,24 @@ function renderSemesterBlock(sem, semData){
   return `<div class="semester-block"><div class="semester-title">📚 ${semLabel}  <span style="font-weight:400;color:#64748b;font-size:13px;">· 평균 ${semAvg}등급${scaleTag} · 총 ${summary.총학점||'-'}학점 (등급 ${summary.등급대상학점||'-'}학점)</span></div><table class="grade"><thead><tr><th>교과</th><th>과목</th><th>학점</th><th>원점수</th><th>평균</th><th>성취도</th><th>등급</th><th>석차/수강자</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
+// ========== 세특 키포인트 추출 ==========
+function extractKeyPoints(content, n=3){
+  if(!content) return [];
+  // 마침표·느낌표·물음표 뒤 공백 기준으로 문장 분리
+  const raw = content.split(/(?<=[.!?])\s+/);
+  const sentences = raw
+    .map(s => s.trim())
+    .filter(s => s.length > 15);
+  const points = [];
+  for(const s of sentences){
+    if(points.length >= n) break;
+    // 너무 짧거나 중복되는 문장 제외
+    const trimmed = s.length > 90 ? s.substring(0, 88) + '…' : s;
+    points.push(trimmed);
+  }
+  return points;
+}
+
 // ========== 세특 탭 ==========
 function renderSewtuk(el){
   const hak = String(currentStu.hak);
@@ -425,14 +448,20 @@ function renderSewtuk(el){
     filtered.forEach(s=>{
       const key = `${s.학년}-${s.학기}-${s.과목}`;
       const isOpen = openAccordions.has(key);
+      const keyPoints = extractKeyPoints(s.내용);
+      const kpHtml = keyPoints.length > 0
+        ? `<ul class="key-points">${keyPoints.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ul>`
+        : '';
       html += `
         <div class="accordion ${isOpen?'open':''}" data-key="${key}">
           <div class="accordion-head">
             <div class="accordion-title">
-              <span class="sub-cat">${s.교과}</span>
-              <span class="sub-name">${s.과목}</span>
-              <span class="sub-meta">${s.학년}학년 ${s.학기==='both'?'전체':s.학기+'학기'}</span>
-              <span class="sub-summary">💡 ${escapeHtml(s.요약||'')}</span>
+              <div class="acc-top-row">
+                <span class="sub-cat">${s.교과}</span>
+                <span class="sub-name">${s.과목}</span>
+                <span class="sub-meta">${s.학년}학년 ${s.학기==='both'?'전체':s.학기+'학기'}</span>
+              </div>
+              ${kpHtml}
             </div>
             <span class="arrow">▶</span>
           </div>
