@@ -342,7 +342,7 @@ table.htbl tr:hover td{background:#f5f7ff}
 ═══════════════════════════════════════════════ */
 const SUPABASE_URL = 'https://yqnixxkebpdrfngnnowi.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlxbml4eGtlYnBkcmZuZ25ub3dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjE4NjMsImV4cCI6MjA5MzY5Nzg2M30.fwXtcQcmKe1CrpIpujFRMvpZ8luC640s0Cd-nOboOOo';
-const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ═══════════════════════════════════════════════
    인증 함수들
@@ -350,7 +350,7 @@ const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 async function loginWithGoogle() {
   document.getElementById('loginLoading').style.display = 'block';
   document.getElementById('loginError').style.display = 'none';
-  const { error } = await _supabase.auth.signInWithOAuth({
+  const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: window.location.href }
   });
@@ -362,12 +362,12 @@ async function loginWithGoogle() {
 
 async function logout() {
   if (!confirm('로그아웃 하시겠습니까?')) return;
-  await _supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   location.reload();
 }
 
 async function checkAuth() {
-  const { data: { session } } = await _supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
     document.getElementById('loginScreen').style.display = 'flex';
     return false;
@@ -386,7 +386,7 @@ async function loadStudentsFromDB() {
   const ind = document.getElementById('saveInd');
   if (ind) ind.textContent = '⏳ 불러오는 중...';
 
-  const { data, error } = await _supabase
+  const { data, error } = await supabaseClient
     .from('students')
     .select(`*, student_unis(*), student_naesin(*), student_mock_hist(*), student_analysis(*), student_extras(*), student_sebus(*), student_zones(*)`)
     .order('id');
@@ -444,27 +444,27 @@ async function saveStudentToDB(student) {
     photo: student.photo
   };
 
-  const { error: e1 } = await _supabase.from('students').upsert(studentData);
+  const { error: e1 } = await supabaseClient.from('students').upsert(studentData);
   if (e1) { console.error('학생 저장 오류:', e1); if(ind) ind.textContent='❌ 저장 실패'; return; }
 
   const sid = student.id;
 
   // 2. 희망 대학 저장
-  await _supabase.from('student_unis').delete().eq('student_id', sid);
+  await supabaseClient.from('student_unis').delete().eq('student_id', sid);
   if (student.unis?.length) {
     const unisData = student.unis.map((u,i) => ({student_id:sid, name:u.name, dept:u.dept, type:u.type, min:u.min, result:u.result, order_idx:i}));
-    await _supabase.from('student_unis').insert(unisData);
+    await supabaseClient.from('student_unis').insert(unisData);
   }
 
   // 3. 내신 저장
-  await _supabase.from('student_naesin').delete().eq('student_id', sid);
+  await supabaseClient.from('student_naesin').delete().eq('student_id', sid);
   if (student.naesin?.length) {
     const naesinData = student.naesin.map(n => ({student_id:sid, subj:n.subj, sem:n.sem, unit:n.unit, raw:n.raw, grade:n.grade}));
-    await _supabase.from('student_naesin').insert(naesinData);
+    await supabaseClient.from('student_naesin').insert(naesinData);
   }
 
   // 4. 모의고사 저장
-  await _supabase.from('student_mock_hist').delete().eq('student_id', sid);
+  await supabaseClient.from('student_mock_hist').delete().eq('student_id', sid);
   if (student.mockHist?.length) {
     const mockData = student.mockHist.map(m => ({
       student_id:sid, year:m.year, month:m.month,
@@ -473,25 +473,25 @@ async function saveStudentToDB(student) {
       his_score:m.hisScore, soc_score:m.socScore, sci_score:m.sciScore,
       kor_p:m.korP, math_p:m.mathP, soc_p:m.socP, sci_p:m.sciP, t3:m.t3
     }));
-    await _supabase.from('student_mock_hist').insert(mockData);
+    await supabaseClient.from('student_mock_hist').insert(mockData);
   }
 
   // 5. 비교과 저장
-  await _supabase.from('student_extras').delete().eq('student_id', sid);
+  await supabaseClient.from('student_extras').delete().eq('student_id', sid);
   if (student.extras?.length) {
-    await _supabase.from('student_extras').insert(student.extras.map(e => ({student_id:sid, type:e.type, year:e.year, text:e.text})));
+    await supabaseClient.from('student_extras').insert(student.extras.map(e => ({student_id:sid, type:e.type, year:e.year, text:e.text})));
   }
 
   // 6. 세특 저장
-  await _supabase.from('student_sebus').delete().eq('student_id', sid);
+  await supabaseClient.from('student_sebus').delete().eq('student_id', sid);
   if (student.sebus?.length) {
-    await _supabase.from('student_sebus').insert(student.sebus.map(e => ({student_id:sid, subj:e.subj, year:e.year, text:e.text})));
+    await supabaseClient.from('student_sebus').insert(student.sebus.map(e => ({student_id:sid, subj:e.subj, year:e.year, text:e.text})));
   }
 
   // 7. 지원 영역 저장
-  await _supabase.from('student_zones').delete().eq('student_id', sid);
+  await supabaseClient.from('student_zones').delete().eq('student_id', sid);
   if (student.zone) {
-    await _supabase.from('student_zones').insert({student_id:sid, g:student.zone.g, b:student.zone.b, a:student.zone.a});
+    await supabaseClient.from('student_zones').insert({student_id:sid, g:student.zone.g, b:student.zone.b, a:student.zone.a});
   }
 
   if (ind) { ind.textContent = '✅ 저장됨'; setTimeout(()=>{ind.textContent='● DB 연결됨';}, 1500); }
@@ -522,7 +522,7 @@ async function migrateToSupabase() {
           major: item.major, minor: item.minor,
           items: item.items, wrong: item.wrong, rate: item.rate
         }));
-        await _supabase.from('student_analysis').upsert(analysisRows);
+        await supabaseClient.from('student_analysis').upsert(analysisRows);
       }
     }
   }
@@ -535,7 +535,7 @@ async function migrateToSupabase() {
 
 // 실시간 동기화
 function setupRealtime() {
-  _supabase.channel('students-changes')
+  supabaseClient.channel('students-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, async () => {
       await loadStudentsFromDB();
       renderSidebar(); renderMain();
@@ -1375,7 +1375,7 @@ const INIT_STUDENTS = [{"id": 1, "name": "강보라", "cls": "1학년 1반 1번"
 const DATA_VERSION = 3; // mock+naesin 세팅
 
 // Supabase 인증 상태 변화 감지
-_supabase.auth.onAuthStateChange(async (event, session) => {
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('userInfo').textContent = '👤 ' + (session?.user?.email || '');
